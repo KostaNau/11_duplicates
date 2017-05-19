@@ -1,6 +1,7 @@
 import os
 import itertools
 import argparse
+import filecmp
 from collections import defaultdict
 
 
@@ -22,8 +23,7 @@ def get_filepaths(target_directory: str) -> str:
 
 
 def are_duplicates(filepath1: str, filepath2: str) -> bool:
-    return os.path.basename(filepath1) == os.path.basename(filepath2) and \
-            os.path.getsize(filepath1) == os.path.getsize(filepath2)
+    return filecmp.cmp(filepath1, filepath2)
 
 
 def find_duplicates(paths_pool: iter) -> defaultdict:
