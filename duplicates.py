@@ -7,7 +7,7 @@ from collections import defaultdict
 
 def parse_arg() -> bytes:
     parser = argparse.ArgumentParser(description='Anti-Duplicator. \
-    The script finds files with equal name and size or with hash comparsion\
+    The script finds files with equal name and size or with hash comparison\
      in a target directory.')
     parser.add_argument('target',
                         help="path to the target directory")
