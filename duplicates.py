@@ -1,50 +1,77 @@
 import os
-import itertools
 import argparse
-import filecmp
+import hashlib
+import sys
 from collections import defaultdict
 
 
-def parse_arg() -> str:
+def parse_arg() -> bytes:
     parser = argparse.ArgumentParser(description='Anti-Duplicator. \
-    The script finds files with equal name and size in a target directory.')
-    parser.add_argument('-target', help="path to the target directory")
+    The script finds files with equal name and size or with hash comparsion\
+     in a target directory.')
+    parser.add_argument('target',
+                        help="path to the target directory")
+    parser.add_argument('--md5',
+                        type=bool,
+                        default=False,
+                        help="Toggle for md5 comparison. By default is False.")
     args = parser.parse_args()
-    target_directory = args.target
-    return target_directory
+    return args
 
 
-def get_filepaths(target_directory: str) -> str:
-    for subdir, dirs, files in os.walk(root_directory):
+def fetch_file_info(file_path: str, hash_md5: bool) -> str:
+    f_info = os.path.getsize(file_path)
+    if hash_md5:
+            f_info = get_md5checksum(file_path)
+    return f_info
+
+
+def get_md5checksum(file_path: str) -> str:
+    try:
+        f_hash = hashlib.md5()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                f_hash.update(chunk)
+    except PermissionError as ex:
+        sys.stderr.write('ERROR >>> {}'.format(ex))
+    return f_hash.hexdigest()
+
+
+def get_files_stack(target_directory: str, hash_md5=False) -> defaultdict:
+    files_pool = defaultdict(list)
+    for subdir, dirs, files in os.walk(target_directory):
         for file in files:
             file_path = os.path.join(subdir, file)
-            if os.path.isfile(file_path):
-                yield file_path
+            # if os.path.isfile(file_path):
+            file_info = fetch_file_info(file_path, hash_md5)
+            files_pool[file, file_info].append(file_path)
+    return files_pool
 
 
-def are_duplicates(filepath1: str, filepath2: str) -> bool:
-    return filecmp.cmp(filepath1, filepath2)
-
-
-def find_duplicates(paths_pool: iter) -> defaultdict:
-    duplicates = defaultdict(list)
-    for file_path_1, file_path_2 in itertools.combinations(paths_pool, 2):
-        if are_duplicates(file_path_1, file_path_2):
-            duplicates[os.path.basename(file_path_1)].append(file_path_1)
-            duplicates[os.path.basename(file_path_1)].append(file_path_2)
-    return duplicates
+def find_duplicates(files_pool: defaultdict) -> defaultdict:
+    duplicates_pool = defaultdict(list)
+    for name, paths in files_pool.items():
+        if len(paths) > 1:
+            duplicates_pool[name].extend(paths)
+    return duplicates_pool
 
 
 def output_duplicates(duplicates: defaultdict) -> None:
-    for name, paths in duplicates.items():
-        print('File name: {}'.format(name))
-        for path in paths:
-            print('Path: {}'.format(path))
-        print('==========================================================')
+        for name, paths in duplicates.items():
+            print('File name: {}'.format(name[0]))
+            for path in paths:
+                print('Path: {}'.format(path))
+            print('==========================================================')
+        print('Total duplicates: ', len(duplicates.keys()))
+
+
+def main():
+    options = parse_arg()
+    root_directory = options.target
+    files_pool = get_files_stack(root_directory, hash_md5=options.md5)
+    duplicates = find_duplicates(files_pool)
+    output_duplicates(duplicates)
 
 
 if __name__ == '__main__':
-    root_directory = parse_arg()
-    all_paths = get_filepaths(root_directory)
-    duplicates = find_duplicates(all_paths)
-    output_duplicates(duplicates)
+    main()
