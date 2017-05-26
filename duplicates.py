@@ -4,6 +4,7 @@ import hashlib
 import sys
 from collections import defaultdict
 
+READ_BUFFER = 4096
 
 def parse_arg() -> bytes:
     parser = argparse.ArgumentParser(description='Anti-Duplicator. \
@@ -22,7 +23,7 @@ def parse_arg() -> bytes:
 def fetch_file_info(file_path: str, hash_md5: bool) -> str:
     f_info = os.path.getsize(file_path)
     if hash_md5:
-            f_info = get_md5checksum(file_path)
+        f_info = get_md5checksum(file_path)
     return f_info
 
 
@@ -30,7 +31,7 @@ def get_md5checksum(file_path: str) -> str:
     try:
         f_hash = hashlib.md5()
         with open(file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(4096), b""):
+            for chunk in iter(lambda: f.read(READ_BUFFER), b""):
                 f_hash.update(chunk)
     except PermissionError as ex:
         sys.stderr.write('ERROR >>> {}'.format(ex))
@@ -42,7 +43,6 @@ def get_files_stack(target_directory: str, hash_md5=False) -> defaultdict:
     for subdir, dirs, files in os.walk(target_directory):
         for file in files:
             file_path = os.path.join(subdir, file)
-            # if os.path.isfile(file_path):
             file_info = fetch_file_info(file_path, hash_md5)
             files_pool[file, file_info].append(file_path)
     return files_pool
