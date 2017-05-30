@@ -4,7 +4,6 @@ import hashlib
 import sys
 from collections import defaultdict
 
-READ_BUFFER = 4096
 
 def parse_arg() -> bytes:
     parser = argparse.ArgumentParser(description='Anti-Duplicator. \
@@ -28,10 +27,11 @@ def fetch_file_info(file_path: str, hash_md5: bool) -> str:
 
 
 def get_md5checksum(file_path: str) -> str:
+    buffer_size = 4096
     try:
         f_hash = hashlib.md5()
         with open(file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(READ_BUFFER), b""):
+            for chunk in iter(lambda: f.read(buffer_size), b""):
                 f_hash.update(chunk)
     except PermissionError as ex:
         sys.stderr.write('ERROR >>> {}'.format(ex))
@@ -57,12 +57,12 @@ def find_duplicates(files_pool: defaultdict) -> defaultdict:
 
 
 def output_duplicates(duplicates: defaultdict) -> None:
-        for name, paths in duplicates.items():
-            print('File name: {}'.format(name[0]))
-            for path in paths:
-                print('Path: {}'.format(path))
-            print('==========================================================')
-        print('Total duplicates: ', len(duplicates.keys()))
+    for name, paths in duplicates.items():
+        print('File name: {}'.format(name[0]))
+        for path in paths:
+            print('Path: {}'.format(path))
+        print('==========================================================')
+    print('Total duplicates: ', len(duplicates.keys()))
 
 
 def main():
